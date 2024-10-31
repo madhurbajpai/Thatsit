@@ -20,10 +20,10 @@ const Image = styled('img')({
 })
 
 const Conversation = ({user}) => {
-    const {setPerson} = useContext(AccountContext);
+    const {setPerson, account} = useContext(AccountContext);
     const getUser = async () =>{
         setPerson(user);
-        await setConversation({senderId: AccountContext.sub,receiverId: user.sub});
+        await setConversation({senderId: account.sub,receiverId: user.sub});
     }
 
   return (

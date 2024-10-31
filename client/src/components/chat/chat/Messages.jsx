@@ -1,9 +1,10 @@
 import { Box, styled } from "@mui/material";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AccountContext } from '../../../context/AccountProvider';
-
+import { getMessages, newMessage } from "../../../service/api";
 import React from "react";
 import Footer from "./Footer";
+import Message from "./Message";
 
 const Wrapper = styled(Box)`
   background-image: url(${"https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"});
@@ -15,28 +16,62 @@ const Component = styled(Box)`
   overflow-y: scroll;
 `;
 
-const Messages = ({person}) => {
+const Container = styled(Box)`
+  padding: 1px 80px;
+`;
 
+const Messages = ({person, conversation}) => {
+
+  const [value, setValue] = useState('');
+  const [messages, setMessages] = useState([]);
   const {account} = useContext(AccountContext);
 
-  const sendText = (e) => {
-    console.log(e);
+  const [file, setFile] = useState();
+  const [newMessageFlag, setNewMessageFlag] = useState(false);
+
+  useEffect(() => {
+    const getMessageDetails = async () => {
+      let data = await getMessages(conversation._id);
+      setMessages(data);
+    }
+    conversation._id && getMessageDetails();
+  }, [person._id, conversation._id, newMessageFlag]);
+
+  const sendText = async (e) => {
+    // console.log(e);
     const code = e.keyCode || e.which;
     if(code === 13){
       let message = {
         senderId: account.sub,
-        receiverId: person.sub
-        // conversationId: 
+        receiverId: person.sub,
+        conversationId: conversation._id,
+        type: 'text',
+        text: value
       }
+      // console.log(message)
+      await newMessage(message);
+      setValue('');
+      setNewMessageFlag(prev => !prev)
     }
   };
 
   return (
     <Wrapper>
       <Component>
-
+        {
+          messages && messages.map(message => (
+            <Container>
+              <Message message={message}/>
+            </Container>
+          ))
+        }
       </Component>
-      <Footer sendText={sendText} />
+      <Footer sendText={sendText}
+      setValue={setValue}
+      value={value}
+      file={file}
+      setFile={setFile}
+      />
     </Wrapper>
   );
 };
