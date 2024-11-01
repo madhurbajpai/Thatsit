@@ -1,5 +1,5 @@
 import { Box, styled } from "@mui/material";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { AccountContext } from '../../../context/AccountProvider';
 import { getMessages, newMessage } from "../../../service/api";
 import React from "react";
@@ -24,11 +24,22 @@ const Messages = ({person, conversation}) => {
 
   const [value, setValue] = useState('');
   const [messages, setMessages] = useState([]);
-  const {account} = useContext(AccountContext);
+  const {account ,socket, newMessageFlag, setNewMessageFlag} = useContext(AccountContext);
 
   const [file, setFile] = useState();
   const [image, setImage] = useState('');
-  const [newMessageFlag, setNewMessageFlag] = useState(false);
+
+  const [incomingMessage, setIncomingMessage] = useState(null);
+  const scrollRef = useRef();
+
+  useEffect(() => {
+    socket.current.on('getMessage', data => {
+      setIncomingMessage({
+        ...data,
+        createdAt: Date.now()
+      })
+    })
+  },[])
 
   useEffect(() => {
     const getMessageDetails = async () => {
@@ -37,6 +48,14 @@ const Messages = ({person, conversation}) => {
     }
     conversation._id && getMessageDetails();
   }, [person._id, conversation._id, newMessageFlag]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({transition: 'smooth'})
+  }, [messages])
+
+  useEffect(() => {
+    incomingMessage && conversation?.members?.includes(incomingMessage.senderId) && setMessages(prev => [...prev, incomingMessage])
+  },[incomingMessage, conversation])
 
   const sendText = async (e) => {
     // console.log(e);
@@ -60,6 +79,9 @@ const Messages = ({person, conversation}) => {
           text: image 
         }
       }
+
+      socket.current.emit('sendMessage', message)
+
       // console.log(message)
       await newMessage(message);
       setValue('');
@@ -74,7 +96,7 @@ const Messages = ({person, conversation}) => {
       <Component>
         {
           messages && messages.map(message => (
-            <Container>
+            <Container ref={scrollRef}>
               <Message message={message}/>
             </Container>
           ))
